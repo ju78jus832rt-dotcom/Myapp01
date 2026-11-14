@@ -2,23 +2,235 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <!-- 關鍵設定 1：禁止手機畫面隨意縮放，更像原生 App -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <!-- 關鍵設定 2：iOS 專屬全螢幕與狀態列設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>親友小幫手</title>
-  <!-- 連結設定檔與桌面圖示 -->
+  <title>帳密小管家</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icon.png">
   <style>
-    body { font-family: -apple-system, sans-serif; padding: 40px 20px; text-align: center; background: #f5f5f7; }
-    button { padding: 12px 24px; font-size: 16px; border-radius: 10px; border: none; background: #007aff; color: white; }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    body { margin: 0; padding: 50px 20px 30px; background: #f2f2f7; color: #1c1c1e; }
+    .container { max-width: 480px; margin: 0 auto; }
+    h2 { text-align: center; margin-bottom: 20px; font-size: 22px; }
+    
+    /* 功能切換按鈕 */
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .tab-btn { flex: 1; padding: 14px; font-size: 16px; font-weight: bold; border: none; border-radius: 12px; background: #e5e5ea; color: #3a3a3c; cursor: pointer; }
+    .tab-btn.active { background: #007aff; color: white; }
+
+    /* 卡片區塊 */
+    .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+    .hidden { display: none; }
+
+    label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #636366; }
+    input { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #d1d1d6; border-radius: 10px; margin-bottom: 16px; background: #f9f9fb; }
+    input:focus { outline: none; border-color: #007aff; background: white; }
+
+    .action-btn { width: 100%; padding: 14px; font-size: 16px; font-weight: bold; border: none; border-radius: 12px; background: #34c759; color: white; cursor: pointer; }
+    .search-btn { background: #007aff; }
+
+    /* 查詢結果區 */
+    .result-box { margin-top: 20px; padding: 16px; background: #f2f2f7; border-radius: 12px; }
+    .result-item { margin-bottom: 12px; }
+    .result-label { font-size: 13px; color: #8e8e93; }
+    .result-value { font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; margin-top: 4px; word-break: break-all; }
+    .copy-btn { padding: 6px 12px; font-size: 13px; background: #e5e5ea; border: none; border-radius: 8px; color: #007aff; font-weight: bold; margin-left: 10px; flex-shrink: 0; }
+    .del-btn { width: 100%; margin-top: 10px; padding: 10px; background: #ff3b30; color: white; border: none; border-radius: 8px; font-size: 14px; }
+
+    /* 已存清單提示 */
+    .saved-tags { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag { background: #e5f1ff; color: #007aff; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 500; cursor: pointer; }
+    
+    /* 備份按鈕 */
+    .backup-area { margin-top: 24px; text-align: center; }
+    .backup-btn { background: none; border: 1px solid #c7c7cc; color: #636366; padding: 8px 16px; border-radius: 8px; font-size: 13px; }
   </style>
 </head>
 <body>
-  <h2>歡迎使用親友專屬 App</h2>
-  <p>這個畫面沒有瀏覽器網址列，體驗跟原生 App 一樣！</p>
-  <button onclick="alert('功能運作正常！')">點我測試</button>
+
+<div class="container">
+  <h2>🔐 帳戶密碼小管家</h2>
+
+  <!-- 1. 詢問你要的功能 -->
+  <div class="tabs">
+    <button id="tabRead" class="tab-btn active" onclick="switchMode('read')">（1）讀取帳密</button>
+    <button id="tabAdd" class="tab-btn" onclick="switchMode('add')">（2）新增帳密</button>
+  </div>
+
+  <!-- （1）讀取帳戶的帳號密碼 -->
+  <div id="readSection" class="card">
+    <label>1. 輸入帳戶名稱：（如 google、台新、富邦）</label>
+    <input type="text" id="searchName" placeholder="請輸入要查詢的帳戶名稱..." oninput="searchAccount()">
+    <button class="action-btn search-btn" onclick="searchAccount()">查詢帳戶</button>
+
+    <!-- 快速點選已儲存的帳戶標籤 -->
+    <div id="tagList" class="saved-tags"></div>
+
+    <!-- 顯示結果 -->
+    <div id="resultBox" class="result-box hidden">
+      <div class="result-item">
+        <div class="result-label">2. 顯示帳戶帳號：</div>
+        <div class="result-value">
+          <span id="dispUser"></span>
+          <button class="copy-btn" onclick="copyText('dispUser')">複製</button>
+        </div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">3. 顯示帳戶密碼：</div>
+        <div class="result-value">
+          <span id="dispPass"></span>
+          <button class="copy-btn" onclick="copyText('dispPass')">複製</button>
+        </div>
+      </div>
+      <button class="del-btn" onclick="deleteAccount()">刪除此帳戶紀錄</button>
+    </div>
+  </div>
+
+  <!-- （2）新增帳戶的帳號密碼 -->
+  <div id="addSection" class="card hidden">
+    <label>1. 輸入帳戶名稱：（如 google、台新、富邦）</label>
+    <input type="text" id="newName" placeholder="例如：台新">
+
+    <label>2. 輸入帳戶帳號：</label>
+    <input type="text" id="newUser" placeholder="請輸入帳號或身分證/信箱">
+
+    <label>3. 輸入帳戶密碼：</label>
+    <input type="text" id="newPass" placeholder="請輸入密碼">
+
+    <button class="action-btn" onclick="saveAccount()">將帳號密碼記住</button>
+  </div>
+
+  <div class="backup-area">
+    <button class="backup-btn" onclick="exportBackup()">複製所有帳密備份文字</button>
+  </div>
+</div>
+
+<script>
+  let currentAccount = "";
+
+  // 切換功能頁面
+  function switchMode(mode) {
+    if (mode === 'read') {
+      document.getElementById('readSection').classList.remove('hidden');
+      document.getElementById('addSection').classList.add('hidden');
+      document.getElementById('tabRead').classList.add('active');
+      document.getElementById('tabAdd').classList.remove('active');
+      renderTags();
+    } else {
+      document.getElementById('readSection').classList.add('hidden');
+      document.getElementById('addSection').classList.remove('hidden');
+      document.getElementById('tabRead').classList.remove('active');
+      document.getElementById('tabAdd').classList.add('active');
+    }
+  }
+
+  // 取得儲存資料
+  function getData() {
+    return JSON.parse(localStorage.getItem('myAccounts') || '{}');
+  }
+
+  // （2）儲存帳號密碼
+  function saveAccount() {
+    const name = document.getElementById('newName').value.trim();
+    const user = document.getElementById('newUser').value.trim();
+    const pass = document.getElementById('newPass').value.trim();
+
+    if (!name || !user || !pass) {
+      alert('請完整輸入帳戶名稱、帳號與密碼！');
+      return;
+    }
+
+    const data = getData();
+    data[name] = { user: user, pass: pass };
+    localStorage.setItem('myAccounts', JSON.stringify(data));
+
+    alert('✅ 已成功記住「' + name + '」的帳號密碼！');
+    document.getElementById('newName').value = '';
+    document.getElementById('newUser').value = '';
+    document.getElementById('newPass').value = '';
+    switchMode('read');
+  }
+
+  // （1）讀取帳號密碼
+  function searchAccount(quickName) {
+    const keyword = (quickName || document.getElementById('searchName').value).trim();
+    if (quickName) document.getElementById('searchName').value = quickName;
+
+    const data = getData();
+    const resultBox = document.getElementById('resultBox');
+
+    if (!keyword) {
+      resultBox.classList.add('hidden');
+      return;
+    }
+
+    // 支援不分大小寫搜尋（例如輸入 google 或 Google 都能找到）
+    const matchedKey = Object.keys(data).find(k => k.toLowerCase() === keyword.toLowerCase());
+
+    if (matchedKey) {
+      currentAccount = matchedKey;
+      document.getElementById('dispUser').innerText = data[matchedKey].user;
+      document.getElementById('dispPass').innerText = data[matchedKey].pass;
+      resultBox.classList.remove('hidden');
+    } else {
+      resultBox.classList.add('hidden');
+    }
+  }
+
+  // 顯示已存帳戶標籤（方便直接點擊查詢）
+  function renderTags() {
+    const data = getData();
+    const tagList = document.getElementById('tagList');
+    tagList.innerHTML = '';
+    Object.keys(data).forEach(name => {
+      const span = document.createElement('span');
+      span.className = 'tag';
+      span.innerText = name;
+      span.onclick = () => searchAccount(name);
+      tagList.appendChild(span);
+    });
+  }
+
+  // 一鍵複製
+  function copyText(elementId) {
+    const text = document.getElementById(elementId).innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      alert('已複製：' + text);
+    });
+  }
+
+  // 刪除帳戶
+  function deleteAccount() {
+    if (!currentAccount) return;
+    if (confirm('確定要刪除「' + currentAccount + '」的紀錄嗎？')) {
+      const data = getData();
+      delete data[currentAccount];
+      localStorage.setItem('myAccounts', JSON.stringify(data));
+      document.getElementById('searchName').value = '';
+      document.getElementById('resultBox').classList.add('hidden');
+      renderTags();
+    }
+  }
+
+  // 匯出純文字備份
+  function exportBackup() {
+    const data = getData();
+    const keys = Object.keys(data);
+    if (keys.length === 0) {
+      alert('目前還沒有儲存任何帳密喔！');
+      return;
+    }
+    let text = '【帳密備份清單】\n';
+    keys.forEach(k => {
+      text += `\n帳戶：${k}\n帳號：${data[k].user}\n密碼：${data[k].pass}\n`;
+    });
+    navigator.clipboard.writeText(text).then(() => {
+      alert('已將所有帳密整理成文字並複製到剪貼簿，你可以貼到備忘錄保存！');
+    });
+  }
+
+  // 啟動時載入標籤
+  renderTags();
+</script>
 </body>
 </html>
