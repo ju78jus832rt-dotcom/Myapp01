@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <!-- 關鍵設定 1：禁止手機畫面隨意縮放，更像原生 App -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- 關鍵設定 2：iOS 專屬全螢幕與狀態列設定 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>親友小幫手</title>
+  <!-- 連結設定檔與桌面圖示 -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.png">
+  <style>
+    body { font-family: -apple-system, sans-serif; padding: 40px 20px; text-align: center; background: #f5f5f7; }
+    button { padding: 12px 24px; font-size: 16px; border-radius: 10px; border: none; background: #007aff; color: white; }
+  </style>
+</head>
+<body>
+  <h2>歡迎使用親友專屬 App</h2>
+  <p>這個畫面沒有瀏覽器網址列，體驗跟原生 App 一樣！</p>
+  <button onclick="alert('功能運作正常！')">點我測試</button>
+</body>
+</html>
